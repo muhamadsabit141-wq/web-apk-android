@@ -8,10 +8,12 @@ import Sidebar from "@/components/sidebar/Sidebar";
 import Dashboard from "@/components/dashboard/Dashboard";
 import PageEditor from "@/components/editor/PageEditor";
 import HabitTracker from "@/components/habit-tracker/HabitTracker";
+import TasksView from "@/components/tasks/TasksView";
 import BottomNav from "@/components/navigation/BottomNav";
 import SearchView from "@/components/navigation/SearchView";
 import SettingsView from "@/components/navigation/SettingsView";
 import CommandPalette from "@/components/ui/CommandPalette";
+import { AIAssistant } from "@/components/ai/AIAssistant";
 
 export default function WorkspacePage() {
   const user = useStore((s) => s.user);
@@ -41,6 +43,7 @@ export default function WorkspacePage() {
 
   const getMobileTitle = () => {
     if (mobileTab === "search") return "Search";
+    if (mobileTab === "tasks" || currentPageId === "__tasks__") return "Tasks";
     if (mobileTab === "settings") return "Settings";
     if (mobileTab === "habits" || currentPageId === "__habits__") return "Habit Tracker";
     if (currentPage) return currentPage.title || "Untitled";
@@ -49,16 +52,19 @@ export default function WorkspacePage() {
 
   const renderMobileContent = () => {
     if (mobileTab === "search") return <SearchView />;
+    if (mobileTab === "tasks" || currentPageId === "__tasks__")
+      return <TasksView />;
     if (mobileTab === "settings") return <SettingsView />;
     if (mobileTab === "habits" || currentPageId === "__habits__")
       return <HabitTracker />;
-    if (currentPageId && currentPageId !== "__habits__")
+    if (currentPageId && currentPageId !== "__habits__" && currentPageId !== "__tasks__")
       return <PageEditor pageId={currentPageId} />;
     return <Dashboard />;
   };
 
   const renderDesktopContent = () => {
     if (!currentPageId) return <Dashboard />;
+    if (currentPageId === "__tasks__") return <TasksView />;
     if (currentPageId === "__habits__") return <HabitTracker />;
     return <PageEditor pageId={currentPageId} />;
   };
@@ -149,6 +155,9 @@ export default function WorkspacePage() {
 
       {/* Mobile bottom navigation */}
       <BottomNav />
+
+      {/* AI Assistant */}
+      <AIAssistant />
     </div>
   );
 }

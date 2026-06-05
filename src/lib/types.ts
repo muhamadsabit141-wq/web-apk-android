@@ -40,12 +40,40 @@ export interface Page {
   updatedAt: number;
 }
 
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
+export type TaskStatus = "todo" | "in-progress" | "done" | "cancelled";
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  dueDate?: number;
+  startDate?: number;
+  tags: string[];
+  assignee?: string;
+  createdAt: number;
+  updatedAt: number;
+  checklist?: { id: string; text: string; completed: boolean }[];
+  pageId?: string;
+  position?: number;
+}
+
 export interface Habit {
   id: string;
   name: string;
+  description?: string;
   color: string;
+  icon?: string;
+  frequency: "daily" | "weekly" | "monthly";
   completedDates: string[];
   createdAt: number;
+  lastCompletedAt?: number;
+  currentStreak?: number;
+  longestStreak?: number;
+  completionRate?: number;
+  goal?: number; // goal per time period
 }
 
 export interface User {
@@ -84,4 +112,16 @@ export interface Database {
   viewMode: ViewMode;
 }
 
-export type MobileTab = "home" | "search" | "add" | "habits" | "settings";
+export type MobileTab = "home" | "search" | "add" | "tasks" | "habits" | "settings";
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  date: string;
+  type: "task" | "habit" | "event" | "reminder";
+  color?: string;
+  icon?: string;
+  taskId?: string;
+  habitId?: string;
+}
+
