@@ -1,25 +1,24 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
-  GripVertical,
   Plus,
   Trash2,
+  GripVertical,
   ChevronRight,
-  ChevronDown,
   Check,
-  ArrowUp,
-  ArrowDown,
+  ImageIcon,
 } from "lucide-react";
-import type { Block, BlockType } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import type { Block } from "@/lib/types";
 
 interface BlockRendererProps {
   block: Block;
   pageId: string;
   onSlashMenu: (blockId: string, rect: DOMRect) => void;
   focusBlockId: string | null;
+  index?: number;
 }
 
 export default function BlockRenderer({
@@ -27,58 +26,77 @@ export default function BlockRenderer({
   pageId,
   onSlashMenu,
   focusBlockId,
+  index = 0,
 }: BlockRendererProps) {
+  const addBlock = useStore((s) => s.addBlock);
   const updateBlock = useStore((s) => s.updateBlock);
   const deleteBlock = useStore((s) => s.deleteBlock);
-  const addBlock = useStore((s) => s.addBlock);
-  const moveBlock = useStore((s) => s.moveBlock);
+
   const [showActions, setShowActions] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null);
 
   useEffect(() => {
     if (focusBlockId === block.id && inputRef.current) {
       inputRef.current.focus();
-      if (inputRef.current instanceof HTMLTextAreaElement) {
-        const len = inputRef.current.value.length;
-        inputRef.current.setSelectionRange(len, len);
+      if ("selectionStart" in inputRef.current) {
+        inputRef.current.selectionStart = inputRef.current.value.length;
+        inputRef.current.selectionEnd = inputRef.current.value.length;
       }
     }
   }, [focusBlockId, block.id]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-      if (e.key === "Enter" && !e.shiftKey && block.type !== "code") {
-        e.preventDefault();
-        addBlock(pageId, block.id, block.type === "todo" ? "todo" : "text");
-      }
-      if (e.key === "Backspace" && block.content === "" && block.type !== "text") {
-        e.preventDefault();
-        updateBlock(pageId, block.id, { type: "text" as BlockType });
-      }
-      if (e.key === "Backspace" && block.content === "" && block.type === "text") {
-        e.preventDefault();
-        deleteBlock(pageId, block.id);
-      }
-      if (e.key === "/" && block.content === "") {
-        const el = e.currentTarget;
-        const rect = el.getBoundingClientRect();
-        onSlashMenu(block.id, rect);
-      }
-    },
-    [block, pageId, addBlock, updateBlock, deleteBlock, onSlashMenu]
-  );
-
-  const handleChange = (value: string) => {
-    updateBlock(pageId, block.id, { content: value });
-  };
 
   const autoResize = (el: HTMLTextAreaElement) => {
     el.style.height = "auto";
     el.style.height = el.scrollHeight + "px";
   };
 
+  useEffect(() => {
+    if (inputRef.current && inputRef.current instanceof HTMLTextAreaElement) {
+      autoResize(inputRef.current);
+    }
+  }, [block.content]);
+
+  const handleChange = (value: string) => {
+    updateBlock(pageId, block.id, { content: value });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey && block.type !== "code") {
+      e.preventDefault();
+      addBlock(pageId, block.id);
+    }
+    if (
+      e.key === "Backspace" &&
+      block.content === "" &&
+      block.type !== "text"
+    ) {
+      e.preventDefault();
+      updateBlock(pageId, block.id, { type: "text" });
+    }
+    if (e.key === "Backspace" && block.content === "" && block.type === "text") {
+      e.preventDefault();
+      deleteBlock(pageId, block.id);
+    }
+    if (e.key === "/" && block.content === "") {
+      e.preventDefault();
+      const rect = inputRef.current?.getBoundingClientRect();
+      if (rect) onSlashMenu(block.id, rect);
+    }
+    if (e.key === "Tab" && block.type === "code") {
+      e.preventDefault();
+      const target = e.target as HTMLTextAreaElement;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      const value = target.value;
+      handleChange(value.substring(0, start) + "  " + value.substring(end));
+      setTimeout(() => {
+        target.selectionStart = target.selectionEnd = start + 2;
+      }, 0);
+    }
+  };
+
   const baseInputClass =
-    "w-full bg-transparent focus:outline-none resize-none text-[#37352F] dark:text-[#E8E8E5] placeholder:text-gray-400 dark:placeholder:text-gray-600";
+    "w-full resize-none overflow-hidden bg-transparent focus:outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 text-gray-900 dark:text-gray-100";
 
   const renderBlock = () => {
     switch (block.type) {
@@ -121,7 +139,7 @@ export default function BlockRenderer({
       case "bulletList":
         return (
           <div className="flex items-start gap-2">
-            <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#37352F] dark:bg-[#E8E8E5]" />
+            <span className="mt-[10px] h-1.5 w-1.5 shrink-0 rounded-full bg-gray-900 dark:bg-gray-100" />
             <textarea
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
               value={block.content}
@@ -136,8 +154,8 @@ export default function BlockRenderer({
       case "numberedList":
         return (
           <div className="flex items-start gap-2">
-            <span className="mt-[2px] shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400 min-w-[20px]">
-              1.
+            <span className="mt-[2px] shrink-0 min-w-[1.25rem] text-right text-base text-gray-500 dark:text-gray-400">
+              {(index + 1)}.
             </span>
             <textarea
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
@@ -152,14 +170,14 @@ export default function BlockRenderer({
         );
       case "todo":
         return (
-          <div className="flex items-start gap-2.5">
+          <div className="flex items-start gap-2">
             <button
               onClick={() => updateBlock(pageId, block.id, { checked: !block.checked })}
               className={cn(
                 "mt-[3px] flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
                 block.checked
                   ? "border-[#0F7DFF] bg-[#0F7DFF] text-white"
-                  : "border-gray-300 hover:border-gray-400 dark:border-gray-600"
+                  : "border-gray-300 hover:border-gray-400 dark:border-gray-600 dark:hover:border-gray-500"
               )}
             >
               {block.checked && <Check size={12} strokeWidth={3} />}
@@ -187,36 +205,30 @@ export default function BlockRenderer({
         );
       case "code":
         return (
-          <div className="rounded-lg bg-gray-50 dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#3a3a3a]">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-[#3a3a3a]">
-              <span className="text-xs font-medium text-gray-500">Code</span>
+          <div className="rounded-lg border border-gray-200 bg-[#F7F7F5] dark:border-[#3a3a3a] dark:bg-[#1e1e1e]">
+            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-1.5 dark:border-[#3a3a3a]">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-gray-400">
+                {block.language || "code"}
+              </span>
             </div>
             <textarea
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
               value={block.content}
               onChange={(e) => { handleChange(e.target.value); autoResize(e.target); }}
-              onKeyDown={(e) => {
-                if (e.key === "Tab") {
-                  e.preventDefault();
-                  const target = e.target as HTMLTextAreaElement;
-                  const start = target.selectionStart;
-                  const end = target.selectionEnd;
-                  handleChange(block.content.substring(0, start) + "  " + block.content.substring(end));
-                  setTimeout(() => target.setSelectionRange(start + 2, start + 2), 0);
-                } else {
-                  handleKeyDown(e);
-                }
-              }}
-              placeholder="// Write code here..."
+              onKeyDown={handleKeyDown}
+              placeholder="Write code..."
               rows={3}
-              className={cn(baseInputClass, "px-4 py-3 font-mono text-sm leading-6 whitespace-pre")}
+              className={cn(
+                baseInputClass,
+                "whitespace-pre-wrap p-4 font-mono text-sm leading-6"
+              )}
             />
           </div>
         );
       case "quote":
         return (
-          <div className="flex gap-3">
-            <div className="w-1 shrink-0 rounded-full bg-[#37352F] dark:bg-[#E8E8E5]" />
+          <div className="flex">
+            <div className="mr-3 w-1 shrink-0 rounded-full bg-gray-900 dark:bg-gray-100" />
             <textarea
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
               value={block.content}
@@ -224,34 +236,44 @@ export default function BlockRenderer({
               onKeyDown={handleKeyDown}
               placeholder="Quote"
               rows={1}
-              className={cn(baseInputClass, "text-base italic leading-[1.7]")}
+              className={cn(baseInputClass, "text-base italic leading-[1.7] text-gray-700 dark:text-gray-300")}
             />
           </div>
         );
       case "callout":
         return (
-          <div className="flex gap-3 rounded-xl bg-blue-50 p-4 dark:bg-blue-900/10">
-            <span className="text-xl">💡</span>
+          <div className="flex gap-3 rounded-lg bg-[#FBF3DB] p-4 dark:bg-[#2D2B24]">
+            <span className="shrink-0 text-xl">💡</span>
             <textarea
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
               value={block.content}
               onChange={(e) => { handleChange(e.target.value); autoResize(e.target); }}
               onKeyDown={handleKeyDown}
-              placeholder="Type a callout..."
+              placeholder="Callout"
               rows={1}
-              className={cn(baseInputClass, "bg-transparent text-base leading-[1.7]")}
+              className={cn(baseInputClass, "text-base leading-[1.7]")}
             />
           </div>
         );
       case "toggle":
         return (
           <div>
-            <div className="flex items-start gap-1.5">
+            <div className="flex items-start gap-1">
               <button
-                onClick={() => updateBlock(pageId, block.id, { collapsed: !block.collapsed })}
+                onClick={() =>
+                  updateBlock(pageId, block.id, {
+                    collapsed: !block.collapsed,
+                  })
+                }
                 className="mt-[3px] shrink-0 rounded p-0.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-[#2f2f2f]"
               >
-                {block.collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                <ChevronRight
+                  size={16}
+                  className={cn(
+                    "transition-transform",
+                    !block.collapsed && "rotate-90"
+                  )}
+                />
               </button>
               <textarea
                 ref={inputRef as React.RefObject<HTMLTextAreaElement>}
@@ -260,14 +282,12 @@ export default function BlockRenderer({
                 onKeyDown={handleKeyDown}
                 placeholder="Toggle"
                 rows={1}
-                className={cn(baseInputClass, "text-base font-medium leading-[1.7]")}
+                className={cn(baseInputClass, "text-base leading-[1.7]")}
               />
             </div>
             {!block.collapsed && (
-              <div className="ml-7 mt-1 border-l-2 border-gray-200 pl-4 dark:border-[#3a3a3a]">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Toggle content area
-                </p>
+              <div className="ml-6 mt-1 border-l-2 border-gray-200 pl-4 dark:border-[#3a3a3a]">
+                <p className="text-sm text-gray-400">Toggle content (click arrow to collapse)</p>
               </div>
             )}
           </div>
@@ -276,13 +296,25 @@ export default function BlockRenderer({
         return (
           <div>
             {block.url ? (
-              <img
-                src={block.url}
-                alt=""
-                className="max-w-full rounded-xl"
-              />
+              <div className="group/img relative overflow-hidden rounded-lg">
+                <img
+                  src={block.url}
+                  alt=""
+                  className="w-full rounded-lg object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+                <button
+                  onClick={() => updateBlock(pageId, block.id, { url: undefined })}
+                  className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white opacity-0 transition-opacity group-hover/img:opacity-100"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             ) : (
-              <div>
+              <div className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50/50 py-8 dark:border-[#3a3a3a] dark:bg-[#1e1e1e]/50">
+                <ImageIcon size={32} className="text-gray-300 dark:text-gray-600" />
                 <input
                   ref={inputRef as React.RefObject<HTMLInputElement>}
                   value={block.content}
@@ -290,14 +322,11 @@ export default function BlockRenderer({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      updateBlock(pageId, block.id, { url: block.content });
+                      updateBlock(pageId, block.id, { url: block.content, content: "" });
                     }
                   }}
-                  placeholder="Paste image URL and press Enter..."
-                  className={cn(
-                    "w-full rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm dark:border-[#3a3a3a] dark:bg-[#1e1e1e]",
-                    baseInputClass
-                  )}
+                  placeholder="Paste image URL and press Enter"
+                  className="w-full max-w-sm bg-transparent px-4 text-center text-sm text-gray-500 placeholder:text-gray-400 focus:outline-none dark:text-gray-400"
                 />
               </div>
             )}
@@ -320,68 +349,68 @@ export default function BlockRenderer({
 
   return (
     <div
-      className="group relative"
+      className="group relative flex items-start"
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      <div className={cn(
-        "absolute -left-14 top-0 hidden items-center gap-0.5 md:flex transition-opacity",
-        showActions ? "opacity-100" : "opacity-0"
-      )}>
+      {/* Left action buttons - desktop */}
+      <div
+        className={cn(
+          "absolute -left-[52px] top-0.5 hidden items-center gap-0.5 md:flex transition-opacity duration-150",
+          showActions ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+      >
         <button
           onClick={() => addBlock(pageId, block.id)}
-          className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2f2f2f]"
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-[#2f2f2f] dark:hover:text-gray-300"
           title="Add block below"
         >
           <Plus size={14} />
         </button>
-        <div className="flex flex-col">
-          <button
-            onClick={() => moveBlock(pageId, block.id, "up")}
-            className="rounded p-0.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2f2f2f]"
-            title="Move up"
-          >
-            <ArrowUp size={10} />
-          </button>
-          <button
-            onClick={() => moveBlock(pageId, block.id, "down")}
-            className="rounded p-0.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2f2f2f]"
-            title="Move down"
-          >
-            <ArrowDown size={10} />
-          </button>
-        </div>
-        <button className="cursor-grab rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2f2f2f]">
+        <button
+          className="cursor-grab rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-[#2f2f2f] dark:hover:text-gray-300"
+          title="Drag to reorder"
+          onMouseDown={() => {}}
+        >
           <GripVertical size={14} />
         </button>
       </div>
 
-      {/* Mobile action: long-press hint */}
-      <div className="flex items-start gap-1 md:hidden">
+      {/* Block content */}
+      <div className="min-w-0 flex-1">{renderBlock()}</div>
+
+      {/* Right action buttons - visible on hover/focus */}
+      <div
+        className={cn(
+          "absolute -right-8 top-0.5 hidden md:flex items-center transition-opacity duration-150",
+          showActions ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+      >
         {block.type !== "divider" && (
           <button
-            onClick={() => {
-              const menu = document.createElement("div");
-              const rect = inputRef.current?.getBoundingClientRect();
-              if (rect) onSlashMenu(block.id, rect);
-            }}
-            className="mt-1 shrink-0 rounded p-1 text-gray-300 active:bg-gray-100 dark:text-gray-600 dark:active:bg-[#2f2f2f]"
-          >
-            <Plus size={14} />
-          </button>
-        )}
-        <div className="flex-1 min-w-0">{renderBlock()}</div>
-        {block.type !== "divider" && showActions && (
-          <button
             onClick={() => deleteBlock(pageId, block.id)}
-            className="mt-1 shrink-0 rounded p-1 text-gray-300 hover:text-red-500"
+            className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+            title="Delete block"
           >
-            <Trash2 size={14} />
+            <Trash2 size={13} />
           </button>
         )}
       </div>
 
-      <div className="hidden md:block">{renderBlock()}</div>
+      {/* Mobile: long-press plus button */}
+      <div className="absolute -left-7 top-0.5 md:hidden">
+        {block.type !== "divider" && (
+          <button
+            onClick={() => {
+              const rect = inputRef.current?.getBoundingClientRect();
+              if (rect) onSlashMenu(block.id, rect);
+            }}
+            className="rounded p-1 text-gray-300 active:text-gray-500 dark:text-gray-600"
+          >
+            <Plus size={14} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -16,6 +16,7 @@ interface AppState {
   currentPageId: string | null;
   mobileTab: MobileTab;
   searchQuery: string;
+  commandPaletteOpen: boolean;
 
   setUser: (user: User | null) => void;
   login: (email: string, name: string) => void;
@@ -24,8 +25,11 @@ interface AppState {
   addPage: (title: string, parentId?: string | null) => string;
   updatePage: (id: string, updates: Partial<Page>) => void;
   deletePage: (id: string) => void;
+  archivePage: (id: string) => void;
+  restorePage: (id: string) => void;
   toggleFavorite: (id: string) => void;
   setCurrentPage: (id: string | null) => void;
+  duplicatePage: (id: string) => string;
 
   addBlock: (pageId: string, afterBlockId: string | null, type?: Block["type"]) => string;
   updateBlock: (pageId: string, blockId: string, updates: Partial<Block>) => void;
@@ -40,10 +44,31 @@ interface AppState {
   toggleDarkMode: () => void;
   setMobileTab: (tab: MobileTab) => void;
   setSearchQuery: (query: string) => void;
+  toggleCommandPalette: () => void;
+
+  getPageBreadcrumbs: (pageId: string) => { id: string; title: string }[];
+}
+
+function ensureBlocks(page: Page): Page {
+  if (!page.blocks || page.blocks.length === 0) {
+    return { ...page, blocks: [createBlock("text", page.content || "")] };
+  }
+  return page;
 }
 
 const defaultPages = (): { pages: Record<string, Page>; pageOrder: string[] } => {
   const gettingStarted = createPage("Getting Started");
+  gettingStarted.blocks = [
+    createBlock("heading1", "Welcome to HabitsXD"),
+    createBlock("text", "Your Notion-inspired workspace for notes, tasks, and habit tracking."),
+    createBlock("divider"),
+    createBlock("heading2", "Quick Start"),
+    createBlock("bulletList", "Type '/' to open the slash command menu"),
+    createBlock("bulletList", "Create new pages from the sidebar"),
+    createBlock("bulletList", "Use the habit tracker to build daily habits"),
+    createBlock("todo", "Try checking this to-do item"),
+    createBlock("callout", "Tip: Press Ctrl+K to open the command palette for quick navigation"),
+  ];
   const quickNote = createPage("Quick Note");
   return {
     pages: {
@@ -69,11 +94,12 @@ export const useStore = create<AppState>()(
         currentPageId: null,
         mobileTab: "home",
         searchQuery: "",
+        commandPaletteOpen: false,
 
         setUser: (user) => set({ user }),
         login: (email, name) =>
           set({ user: { id: email, email, name } }),
-        logout: () => set({ user: null }),
+        logout: () => set({ user: null, currentPageId: null }),
 
         addPage: (title, parentId = null) => {
           const page = createPage(title, parentId);
@@ -122,9 +148,7 @@ export const useStore = create<AppState>()(
           if (page.parentId && newPages[page.parentId]) {
             newPages[page.parentId] = {
               ...newPages[page.parentId],
-              children: newPages[page.parentId].children.filter(
-                (c) => c !== id
-              ),
+              children: newPages[page.parentId].children.filter((c) => c !== id),
             };
           }
 
@@ -135,6 +159,29 @@ export const useStore = create<AppState>()(
               state.currentPageId && toDelete.has(state.currentPageId)
                 ? null
                 : state.currentPageId,
+          });
+        },
+
+        archivePage: (id) => {
+          const state = get();
+          if (!state.pages[id]) return;
+          set({
+            pages: {
+              ...state.pages,
+              [id]: { ...state.pages[id], isArchived: true, updatedAt: Date.now() },
+            },
+            currentPageId: state.currentPageId === id ? null : state.currentPageId,
+          });
+        },
+
+        restorePage: (id) => {
+          const state = get();
+          if (!state.pages[id]) return;
+          set({
+            pages: {
+              ...state.pages,
+              [id]: { ...state.pages[id], isArchived: false, updatedAt: Date.now() },
+            },
           });
         },
 
@@ -154,12 +201,39 @@ export const useStore = create<AppState>()(
 
         setCurrentPage: (id) => set({ currentPageId: id }),
 
+        duplicatePage: (id) => {
+          const state = get();
+          const original = state.pages[id];
+          if (!original) return "";
+          const dup = createPage(original.title + " (copy)", original.parentId);
+          dup.icon = original.icon;
+          dup.coverUrl = original.coverUrl;
+          dup.blocks = original.blocks.map((b) => ({
+            ...b,
+            id: createBlock().id,
+          }));
+          const newPages = { ...state.pages, [dup.id]: dup };
+          let newOrder = [...state.pageOrder];
+
+          if (original.parentId && newPages[original.parentId]) {
+            newPages[original.parentId] = {
+              ...newPages[original.parentId],
+              children: [...newPages[original.parentId].children, dup.id],
+            };
+          } else {
+            newOrder = [...newOrder, dup.id];
+          }
+
+          set({ pages: newPages, pageOrder: newOrder });
+          return dup.id;
+        },
+
         addBlock: (pageId, afterBlockId, type = "text") => {
           const state = get();
-          const page = state.pages[pageId];
+          const page = ensureBlocks(state.pages[pageId]);
           if (!page) return "";
           const block = createBlock(type);
-          const blocks = [...(page.blocks || [])];
+          const blocks = [...page.blocks];
           if (afterBlockId) {
             const idx = blocks.findIndex((b) => b.id === afterBlockId);
             blocks.splice(idx + 1, 0, block);
@@ -177,14 +251,14 @@ export const useStore = create<AppState>()(
 
         updateBlock: (pageId, blockId, updates) => {
           const state = get();
-          const page = state.pages[pageId];
+          const page = ensureBlocks(state.pages[pageId]);
           if (!page) return;
           set({
             pages: {
               ...state.pages,
               [pageId]: {
                 ...page,
-                blocks: (page.blocks || []).map((b) =>
+                blocks: page.blocks.map((b) =>
                   b.id === blockId ? { ...b, ...updates } : b
                 ),
                 updatedAt: Date.now(),
@@ -195,9 +269,9 @@ export const useStore = create<AppState>()(
 
         deleteBlock: (pageId, blockId) => {
           const state = get();
-          const page = state.pages[pageId];
+          const page = ensureBlocks(state.pages[pageId]);
           if (!page) return;
-          const blocks = (page.blocks || []).filter((b) => b.id !== blockId);
+          const blocks = page.blocks.filter((b) => b.id !== blockId);
           if (blocks.length === 0) blocks.push(createBlock("text"));
           set({
             pages: {
@@ -209,9 +283,9 @@ export const useStore = create<AppState>()(
 
         moveBlock: (pageId, blockId, direction) => {
           const state = get();
-          const page = state.pages[pageId];
+          const page = ensureBlocks(state.pages[pageId]);
           if (!page) return;
-          const blocks = [...(page.blocks || [])];
+          const blocks = [...page.blocks];
           const idx = blocks.findIndex((b) => b.id === blockId);
           if (idx === -1) return;
           const newIdx = direction === "up" ? idx - 1 : idx + 1;
@@ -252,6 +326,19 @@ export const useStore = create<AppState>()(
         toggleDarkMode: () => set({ darkMode: !get().darkMode }),
         setMobileTab: (tab) => set({ mobileTab: tab }),
         setSearchQuery: (query) => set({ searchQuery: query }),
+        toggleCommandPalette: () =>
+          set({ commandPaletteOpen: !get().commandPaletteOpen }),
+
+        getPageBreadcrumbs: (pageId) => {
+          const state = get();
+          const crumbs: { id: string; title: string }[] = [];
+          let current = state.pages[pageId];
+          while (current) {
+            crumbs.unshift({ id: current.id, title: current.title || "Untitled" });
+            current = current.parentId ? state.pages[current.parentId] : undefined as unknown as Page;
+          }
+          return crumbs;
+        },
       };
     },
     { name: "habitsxd-store" }

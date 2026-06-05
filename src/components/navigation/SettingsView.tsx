@@ -1,120 +1,186 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Moon, Sun, LogOut, User, FileText, ChevronRight } from "lucide-react";
+import {
+  Moon,
+  Sun,
+  LogOut,
+  Info,
+  Bell,
+  Shield,
+  HelpCircle,
+  ChevronRight,
+} from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export default function SettingsView() {
   const user = useStore((s) => s.user);
+  const pages = useStore((s) => s.pages);
+  const habits = useStore((s) => s.habits);
   const darkMode = useStore((s) => s.darkMode);
   const toggleDarkMode = useStore((s) => s.toggleDarkMode);
   const logout = useStore((s) => s.logout);
-  const pages = useStore((s) => s.pages);
-  const habits = useStore((s) => s.habits);
+
+  const activePages = Object.values(pages).filter((p) => !p.isArchived);
+  const archivedPages = Object.values(pages).filter((p) => p.isArchived);
 
   return (
-    <div className="px-4 py-6 pb-24">
-      <h1 className="mb-6 text-2xl font-bold text-gray-900 dark:text-gray-100">
-        Settings
-      </h1>
-
-      {/* Profile */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6 flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 dark:border-[#2f2f2f] dark:bg-[#1e1e1e]"
-      >
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-xl font-bold text-white">
+    <div className="px-4 py-3">
+      {/* Profile card — Android style */}
+      <div className="mb-5 flex items-center gap-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-5">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-xl font-bold text-white">
           {user?.name?.charAt(0)?.toUpperCase() || "U"}
         </div>
-        <div>
-          <p className="font-semibold text-gray-900 dark:text-gray-100">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-base font-semibold text-white">
             {user?.name || "User"}
           </p>
-          <p className="text-sm text-gray-500">{user?.email}</p>
-        </div>
-      </motion.div>
-
-      {/* Stats */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="mb-6 grid grid-cols-2 gap-3"
-      >
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-[#2f2f2f] dark:bg-[#1e1e1e]">
-          <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
-            <FileText size={18} className="text-blue-600 dark:text-blue-400" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {Object.keys(pages).length}
+          <p className="truncate text-[13px] text-white/70">
+            {user?.email || ""}
           </p>
-          <p className="text-xs text-gray-500">Pages</p>
         </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-[#2f2f2f] dark:bg-[#1e1e1e]">
-          <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-green-100 dark:bg-green-900/30">
-            <User size={18} className="text-green-600 dark:text-green-400" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+      </div>
+
+      {/* Stats — horizontal chips */}
+      <div className="mb-5 flex gap-2">
+        <div className="flex-1 rounded-2xl bg-gray-50 px-4 py-3 text-center dark:bg-[#1e1e1e]">
+          <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            {activePages.length}
+          </p>
+          <p className="text-[11px] text-gray-400">Pages</p>
+        </div>
+        <div className="flex-1 rounded-2xl bg-gray-50 px-4 py-3 text-center dark:bg-[#1e1e1e]">
+          <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
             {habits.length}
           </p>
-          <p className="text-xs text-gray-500">Habits</p>
+          <p className="text-[11px] text-gray-400">Habits</p>
         </div>
-      </motion.div>
+        <div className="flex-1 rounded-2xl bg-gray-50 px-4 py-3 text-center dark:bg-[#1e1e1e]">
+          <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            {archivedPages.length}
+          </p>
+          <p className="text-[11px] text-gray-400">Archived</p>
+        </div>
+      </div>
 
-      {/* Options */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="space-y-2"
-      >
+      {/* Settings list — Android style grouped list */}
+      <div className="mb-4 overflow-hidden rounded-2xl bg-gray-50 dark:bg-[#1e1e1e]">
+        <p className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+          Preferences
+        </p>
+
+        {/* Dark mode toggle */}
         <button
           onClick={toggleDarkMode}
-          className="flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-4 transition-colors active:bg-gray-50 dark:border-[#2f2f2f] dark:bg-[#1e1e1e] dark:active:bg-[#252525]"
+          className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-gray-100 dark:active:bg-[#252525]"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white dark:bg-[#252525] elevation-1">
             {darkMode ? (
               <Sun size={20} className="text-amber-500" />
             ) : (
               <Moon size={20} className="text-indigo-500" />
             )}
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              {darkMode ? "Light Mode" : "Dark Mode"}
-            </span>
+          </div>
+          <div className="flex-1">
+            <p className="text-[14px] font-medium text-gray-900 dark:text-gray-100">
+              Dark mode
+            </p>
+            <p className="text-[12px] text-gray-400">
+              {darkMode ? "On" : "Off"}
+            </p>
           </div>
           <div
             className={cn(
-              "h-7 w-12 rounded-full p-0.5 transition-colors",
-              darkMode ? "bg-[#0F7DFF]" : "bg-gray-300"
+              "flex h-7 w-12 items-center rounded-full p-0.5 transition-colors",
+              darkMode ? "bg-[#0F7DFF]" : "bg-gray-300 dark:bg-gray-600"
             )}
           >
             <div
               className={cn(
-                "h-6 w-6 rounded-full bg-white shadow transition-transform",
-                darkMode && "translate-x-5"
+                "h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
+                darkMode ? "translate-x-5" : "translate-x-0"
               )}
             />
           </div>
         </button>
 
-        <button
-          onClick={logout}
-          className="flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-4 transition-colors active:bg-gray-50 dark:border-[#2f2f2f] dark:bg-[#1e1e1e] dark:active:bg-[#252525]"
-        >
-          <div className="flex items-center gap-3">
-            <LogOut size={20} className="text-red-500" />
-            <span className="text-sm font-medium text-red-500">Log out</span>
-          </div>
-          <ChevronRight size={18} className="text-gray-400" />
-        </button>
-      </motion.div>
+        <div className="mx-4 border-t border-gray-200 dark:border-[#2f2f2f]" />
 
-      {/* Version */}
-      <p className="mt-8 text-center text-xs text-gray-400">
-        HabitsXD v1.0.0
-      </p>
+        {/* Notifications — placeholder */}
+        <div className="flex items-center gap-3 px-4 py-3.5 opacity-50">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white dark:bg-[#252525] elevation-1">
+            <Bell size={20} className="text-green-500" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[14px] font-medium text-gray-900 dark:text-gray-100">
+              Notifications
+            </p>
+            <p className="text-[12px] text-gray-400">Coming soon</p>
+          </div>
+          <ChevronRight size={18} className="text-gray-300" />
+        </div>
+
+        <div className="mx-4 border-t border-gray-200 dark:border-[#2f2f2f]" />
+
+        {/* Privacy — placeholder */}
+        <div className="flex items-center gap-3 px-4 py-3.5 opacity-50">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white dark:bg-[#252525] elevation-1">
+            <Shield size={20} className="text-blue-500" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[14px] font-medium text-gray-900 dark:text-gray-100">
+              Privacy & Security
+            </p>
+            <p className="text-[12px] text-gray-400">Coming soon</p>
+          </div>
+          <ChevronRight size={18} className="text-gray-300" />
+        </div>
+      </div>
+
+      {/* About section */}
+      <div className="mb-4 overflow-hidden rounded-2xl bg-gray-50 dark:bg-[#1e1e1e]">
+        <p className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+          About
+        </p>
+
+        <div className="flex items-center gap-3 px-4 py-3.5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white dark:bg-[#252525] elevation-1">
+            <Info size={20} className="text-gray-500" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[14px] font-medium text-gray-900 dark:text-gray-100">
+              HabitsXD
+            </p>
+            <p className="text-[12px] text-gray-400">
+              Version 1.0.0
+            </p>
+          </div>
+        </div>
+
+        <div className="mx-4 border-t border-gray-200 dark:border-[#2f2f2f]" />
+
+        <div className="flex items-center gap-3 px-4 py-3.5 opacity-50">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white dark:bg-[#252525] elevation-1">
+            <HelpCircle size={20} className="text-gray-500" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[14px] font-medium text-gray-900 dark:text-gray-100">
+              Help & Feedback
+            </p>
+            <p className="text-[12px] text-gray-400">Coming soon</p>
+          </div>
+          <ChevronRight size={18} className="text-gray-300" />
+        </div>
+      </div>
+
+      {/* Sign out */}
+      <button
+        onClick={logout}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 py-3.5 text-[14px] font-semibold text-red-600 active:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:active:bg-red-900/20"
+      >
+        <LogOut size={18} />
+        Sign out
+      </button>
     </div>
   );
 }
