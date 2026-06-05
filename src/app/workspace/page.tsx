@@ -2,8 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Menu, ArrowLeft } from "lucide-react";
+import { Menu, ArrowLeft, Search, MoreVertical } from "lucide-react";
 import { useStore } from "@/lib/store";
 import Sidebar from "@/components/sidebar/Sidebar";
 import Dashboard from "@/components/dashboard/Dashboard";
@@ -12,6 +11,7 @@ import HabitTracker from "@/components/habit-tracker/HabitTracker";
 import BottomNav from "@/components/navigation/BottomNav";
 import SearchView from "@/components/navigation/SearchView";
 import SettingsView from "@/components/navigation/SettingsView";
+import CommandPalette from "@/components/ui/CommandPalette";
 
 export default function WorkspacePage() {
   const user = useStore((s) => s.user);
@@ -21,6 +21,7 @@ export default function WorkspacePage() {
   const mobileTab = useStore((s) => s.mobileTab);
   const setCurrentPage = useStore((s) => s.setCurrentPage);
   const pages = useStore((s) => s.pages);
+  const toggleCommandPalette = useStore((s) => s.toggleCommandPalette);
   const router = useRouter();
 
   useEffect(() => {
@@ -31,15 +32,28 @@ export default function WorkspacePage() {
 
   if (!user) return null;
 
-  const currentPage = currentPageId && currentPageId !== "__habits__"
-    ? pages[currentPageId]
-    : null;
+  const currentPage =
+    currentPageId && currentPageId !== "__habits__"
+      ? pages[currentPageId]
+      : null;
+
+  const showBackButton = currentPageId && mobileTab === "home";
+
+  const getMobileTitle = () => {
+    if (mobileTab === "search") return "Search";
+    if (mobileTab === "settings") return "Settings";
+    if (mobileTab === "habits" || currentPageId === "__habits__") return "Habit Tracker";
+    if (currentPage) return currentPage.title || "Untitled";
+    return "HabitsXD";
+  };
 
   const renderMobileContent = () => {
     if (mobileTab === "search") return <SearchView />;
     if (mobileTab === "settings") return <SettingsView />;
-    if (mobileTab === "habits" || currentPageId === "__habits__") return <HabitTracker />;
-    if (currentPageId && currentPageId !== "__habits__") return <PageEditor pageId={currentPageId} />;
+    if (mobileTab === "habits" || currentPageId === "__habits__")
+      return <HabitTracker />;
+    if (currentPageId && currentPageId !== "__habits__")
+      return <PageEditor pageId={currentPageId} />;
     return <Dashboard />;
   };
 
@@ -52,54 +66,85 @@ export default function WorkspacePage() {
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-white dark:bg-[#191919]">
       <Sidebar />
+      <CommandPalette />
 
       <main className="flex-1 overflow-y-auto">
-        {/* Desktop: hamburger menu when sidebar collapsed */}
+        {/* Desktop: top bar when sidebar collapsed */}
         {!sidebarOpen && (
-          <button
-            onClick={toggleSidebar}
-            className="fixed left-4 top-4 z-30 hidden md:flex rounded-lg bg-white p-2 text-gray-500 shadow-md hover:bg-gray-50 dark:bg-[#252525] dark:text-gray-400 dark:hover:bg-[#2f2f2f]"
-          >
-            <Menu size={18} />
-          </button>
-        )}
-
-        {/* Mobile header */}
-        <div className="sticky top-0 z-20 flex items-center justify-between bg-white/95 px-4 py-3 backdrop-blur-lg dark:bg-[#191919]/95 md:hidden">
-          {currentPageId && mobileTab === "home" ? (
-            <button
-              onClick={() => setCurrentPage(null)}
-              className="flex items-center gap-1 rounded-lg p-1.5 text-gray-500 active:bg-gray-100 dark:text-gray-400"
-            >
-              <ArrowLeft size={20} />
-            </button>
-          ) : (
+          <div className="fixed left-0 right-0 top-0 z-30 hidden md:flex items-center gap-2 bg-white/80 px-4 py-2 backdrop-blur-lg dark:bg-[#191919]/80">
             <button
               onClick={toggleSidebar}
-              className="flex items-center gap-1 rounded-lg p-1.5 text-gray-500 active:bg-gray-100 dark:text-gray-400"
+              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-[#2f2f2f]"
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
-          )}
+            <button
+              onClick={toggleCommandPalette}
+              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2f2f2f]"
+            >
+              <Search size={14} />
+              <span>Search...</span>
+              <kbd className="rounded border border-gray-200 bg-gray-50 px-1 py-0.5 text-[10px] dark:border-[#3a3a3a] dark:bg-[#1e1e1e]">
+                Ctrl+K
+              </kbd>
+            </button>
+          </div>
+        )}
 
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate max-w-[200px]">
-            {mobileTab === "search"
-              ? "Search"
-              : mobileTab === "settings"
-                ? "Settings"
-                : mobileTab === "habits" || currentPageId === "__habits__"
-                  ? "Habit Tracker"
-                  : currentPage
-                    ? currentPage.title || "Untitled"
-                    : "HabitsXD"}
-          </span>
+        {/* Mobile header — Android app bar style */}
+        <div className="sticky top-0 z-20 md:hidden">
+          <div className="flex h-14 items-center gap-1 bg-white px-2 dark:bg-[#1e1e1e] elevation-1">
+            {/* Left action */}
+            {showBackButton ? (
+              <button
+                onClick={() => setCurrentPage(null)}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-gray-700 active:bg-gray-100 dark:text-gray-200 dark:active:bg-[#2f2f2f]"
+              >
+                <ArrowLeft size={22} strokeWidth={1.8} />
+              </button>
+            ) : (
+              <button
+                onClick={toggleSidebar}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-gray-700 active:bg-gray-100 dark:text-gray-200 dark:active:bg-[#2f2f2f]"
+              >
+                <Menu size={22} strokeWidth={1.8} />
+              </button>
+            )}
 
-          <div className="w-8" />
+            {/* Title */}
+            <div className="flex-1 min-w-0 px-1">
+              <h1 className="truncate text-base font-semibold text-gray-900 dark:text-gray-50">
+                {getMobileTitle()}
+              </h1>
+              {currentPage && mobileTab === "home" && (
+                <p className="truncate text-[11px] text-gray-400 leading-tight">
+                  {currentPage.icon || "📄"} {new Date(currentPage.updatedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                </p>
+              )}
+            </div>
+
+            {/* Right actions */}
+            <button
+              onClick={toggleCommandPalette}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 active:bg-gray-100 dark:text-gray-400 dark:active:bg-[#2f2f2f]"
+            >
+              <Search size={20} strokeWidth={1.8} />
+            </button>
+            <button
+              onClick={toggleSidebar}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 active:bg-gray-100 dark:text-gray-400 dark:active:bg-[#2f2f2f]"
+            >
+              <MoreVertical size={20} strokeWidth={1.8} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="hidden md:block">{renderDesktopContent()}</div>
-        <div className="md:hidden pb-20">{renderMobileContent()}</div>
+        <div className="hidden md:block">
+          {!sidebarOpen && <div className="h-12" />}
+          {renderDesktopContent()}
+        </div>
+        <div className="md:hidden pb-[72px]">{renderMobileContent()}</div>
       </main>
 
       {/* Mobile bottom navigation */}

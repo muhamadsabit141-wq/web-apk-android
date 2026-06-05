@@ -15,7 +15,7 @@ import {
   Quote,
   AlertCircle,
   ChevronRight,
-  Image,
+  Image as ImageIcon,
 } from "lucide-react";
 import type { BlockType } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,7 @@ const MENU_ITEMS: SlashMenuItem[] = [
   { type: "quote", label: "Quote", description: "Blockquote text", icon: <Quote size={18} /> },
   { type: "callout", label: "Callout", description: "Highlighted info block", icon: <AlertCircle size={18} /> },
   { type: "toggle", label: "Toggle", description: "Collapsible content", icon: <ChevronRight size={18} /> },
-  { type: "image", label: "Image", description: "Image from URL", icon: <Image size={18} /> },
+  { type: "image", label: "Image", description: "Image from URL", icon: <ImageIcon size={18} /> },
 ];
 
 interface SlashMenuProps {
@@ -66,7 +66,9 @@ export default function SlashMenu({
   );
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- reset selection on query change */
     setSelectedIndex(0);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [query]);
 
   useEffect(() => {

@@ -9,6 +9,7 @@ import {
   Plus,
   Star,
   Trash2,
+  Copy,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -19,7 +20,11 @@ interface PageTreeItemProps {
   onNavigate?: () => void;
 }
 
-export default function PageTreeItem({ pageId, depth = 0, onNavigate }: PageTreeItemProps) {
+export default function PageTreeItem({
+  pageId,
+  depth = 0,
+  onNavigate,
+}: PageTreeItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
 
@@ -27,12 +32,15 @@ export default function PageTreeItem({ pageId, depth = 0, onNavigate }: PageTree
   const currentPageId = useStore((s) => s.currentPageId);
   const setCurrentPage = useStore((s) => s.setCurrentPage);
   const addPage = useStore((s) => s.addPage);
-  const deletePage = useStore((s) => s.deletePage);
+  const archivePage = useStore((s) => s.archivePage);
   const toggleFavorite = useStore((s) => s.toggleFavorite);
+  const duplicatePage = useStore((s) => s.duplicatePage);
 
-  if (!page) return null;
+  if (!page || page.isArchived) return null;
 
-  const hasChildren = page.children.length > 0;
+  const hasChildren = page.children.filter(
+    (cid) => !useStore.getState().pages[cid]?.isArchived
+  ).length > 0;
   const isActive = currentPageId === pageId;
 
   return (
@@ -77,6 +85,13 @@ export default function PageTreeItem({ pageId, depth = 0, onNavigate }: PageTree
 
         <span className="flex-1 truncate">{page.title || "Untitled"}</span>
 
+        {page.isFavorite && (
+          <Star
+            size={10}
+            className="shrink-0 fill-yellow-400 text-yellow-400 group-hover:hidden"
+          />
+        )}
+
         <div className="hidden items-center gap-0.5 group-hover:flex">
           <button
             onClick={(e) => {
@@ -103,28 +118,52 @@ export default function PageTreeItem({ pageId, depth = 0, onNavigate }: PageTree
       </div>
 
       {showMenu && (
-        <div className="ml-8 mt-1 w-40 rounded-xl border border-gray-200 bg-white p-1 shadow-lg dark:border-[#3a3a3a] dark:bg-[#252525]">
-          <button
-            onClick={() => {
-              toggleFavorite(pageId);
-              setShowMenu(false);
-            }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#2f2f2f]"
-          >
-            <Star size={14} />
-            {page.isFavorite ? "Unfavorite" : "Favorite"}
-          </button>
-          <button
-            onClick={() => {
-              deletePage(pageId);
-              setShowMenu(false);
-            }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-          >
-            <Trash2 size={14} />
-            Delete
-          </button>
-        </div>
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setShowMenu(false)}
+          />
+          <div className="relative z-20 ml-8 mt-1 w-44 rounded-xl border border-gray-200 bg-white p-1 shadow-lg dark:border-[#3a3a3a] dark:bg-[#252525]">
+            <button
+              onClick={() => {
+                toggleFavorite(pageId);
+                setShowMenu(false);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#2f2f2f]"
+            >
+              <Star
+                size={14}
+                className={
+                  page.isFavorite ? "fill-yellow-400 text-yellow-400" : ""
+                }
+              />
+              {page.isFavorite ? "Unfavorite" : "Favorite"}
+            </button>
+            <button
+              onClick={() => {
+                const id = duplicatePage(pageId);
+                if (id) setCurrentPage(id);
+                setShowMenu(false);
+                onNavigate?.();
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#2f2f2f]"
+            >
+              <Copy size={14} />
+              Duplicate
+            </button>
+            <div className="mx-2 my-1 border-t border-gray-100 dark:border-[#3a3a3a]" />
+            <button
+              onClick={() => {
+                archivePage(pageId);
+                setShowMenu(false);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              <Trash2 size={14} />
+              Move to trash
+            </button>
+          </div>
+        </>
       )}
 
       <AnimatePresence>
@@ -136,14 +175,18 @@ export default function PageTreeItem({ pageId, depth = 0, onNavigate }: PageTree
             transition={{ duration: 0.15 }}
             className="overflow-hidden"
           >
-            {page.children.map((childId) => (
-              <PageTreeItem
-                key={childId}
-                pageId={childId}
-                depth={depth + 1}
-                onNavigate={onNavigate}
-              />
-            ))}
+            {page.children
+              .filter(
+                (cid) => !useStore.getState().pages[cid]?.isArchived
+              )
+              .map((childId) => (
+                <PageTreeItem
+                  key={childId}
+                  pageId={childId}
+                  depth={depth + 1}
+                  onNavigate={onNavigate}
+                />
+              ))}
           </motion.div>
         )}
       </AnimatePresence>

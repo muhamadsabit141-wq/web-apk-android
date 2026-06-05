@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -14,6 +14,9 @@ import {
   LogOut,
   LayoutDashboard,
   CalendarCheck,
+  Trash2,
+  RotateCcw,
+  ChevronDown,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -31,11 +34,17 @@ export default function Sidebar() {
   const currentPageId = useStore((s) => s.currentPageId);
   const user = useStore((s) => s.user);
   const logout = useStore((s) => s.logout);
+  const restorePage = useStore((s) => s.restorePage);
+  const deletePage = useStore((s) => s.deletePage);
+  const toggleCommandPalette = useStore((s) => s.toggleCommandPalette);
+  const [showTrash, setShowTrash] = useState(false);
 
-  const favorites = Object.values(pages).filter((p) => p.isFavorite);
-  const recentPages = Object.values(pages)
+  const activePages = Object.values(pages).filter((p) => !p.isArchived);
+  const favorites = activePages.filter((p) => p.isFavorite);
+  const recentPages = activePages
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, 5);
+  const archivedPages = Object.values(pages).filter((p) => p.isArchived);
 
   const handleNewPage = () => {
     const id = addPage("Untitled");
@@ -54,11 +63,13 @@ export default function Sidebar() {
     } else {
       document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [sidebarOpen]);
 
   const sidebarContent = (
-    <div className="flex h-full w-[280px] md:w-[260px] flex-col">
+    <div className="flex h-full w-[300px] md:w-[260px] flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2">
@@ -73,16 +84,29 @@ export default function Sidebar() {
           onClick={toggleSidebar}
           className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-[#3a3a3a] dark:hover:text-gray-300"
         >
-          <span className="hidden md:inline"><ChevronsLeft size={16} /></span>
-          <span className="md:hidden"><X size={18} /></span>
+          <span className="hidden md:inline">
+            <ChevronsLeft size={16} />
+          </span>
+          <span className="md:hidden">
+            <X size={18} />
+          </span>
         </button>
       </div>
 
-      {/* Search */}
+      {/* Search / Command palette trigger */}
       <div className="px-3 py-1">
-        <button className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-200/60 dark:text-gray-400 dark:hover:bg-[#2f2f2f]">
+        <button
+          onClick={() => {
+            toggleCommandPalette();
+            if (window.innerWidth < 768) toggleSidebar();
+          }}
+          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-200/60 dark:text-gray-400 dark:hover:bg-[#2f2f2f]"
+        >
           <Search size={14} />
-          Search
+          <span className="flex-1 text-left">Search</span>
+          <kbd className="hidden md:inline-flex items-center rounded border border-gray-300 bg-gray-100 px-1 py-0.5 text-[10px] font-medium text-gray-400 dark:border-[#3a3a3a] dark:bg-[#1e1e1e]">
+            Ctrl+K
+          </kbd>
         </button>
       </div>
 
@@ -124,7 +148,13 @@ export default function Sidebar() {
               Favorites
             </div>
             {favorites.map((p) => (
-              <PageTreeItem key={p.id} pageId={p.id} onNavigate={() => { if (window.innerWidth < 768) toggleSidebar(); }} />
+              <PageTreeItem
+                key={p.id}
+                pageId={p.id}
+                onNavigate={() => {
+                  if (window.innerWidth < 768) toggleSidebar();
+                }}
+              />
             ))}
           </div>
         )}
@@ -137,7 +167,13 @@ export default function Sidebar() {
               Recent
             </div>
             {recentPages.map((p) => (
-              <PageTreeItem key={`recent-${p.id}`} pageId={p.id} onNavigate={() => { if (window.innerWidth < 768) toggleSidebar(); }} />
+              <PageTreeItem
+                key={`recent-${p.id}`}
+                pageId={p.id}
+                onNavigate={() => {
+                  if (window.innerWidth < 768) toggleSidebar();
+                }}
+              />
             ))}
           </div>
         )}
@@ -155,10 +191,85 @@ export default function Sidebar() {
               <Plus size={14} />
             </button>
           </div>
-          {pageOrder.map((pageId) => (
-            <PageTreeItem key={pageId} pageId={pageId} onNavigate={() => { if (window.innerWidth < 768) toggleSidebar(); }} />
-          ))}
+          {pageOrder
+            .filter((id) => !pages[id]?.isArchived)
+            .map((pageId) => (
+              <PageTreeItem
+                key={pageId}
+                pageId={pageId}
+                onNavigate={() => {
+                  if (window.innerWidth < 768) toggleSidebar();
+                }}
+              />
+            ))}
         </div>
+
+        {/* Trash */}
+        <div>
+          <button
+            onClick={() => setShowTrash(!showTrash)}
+            className="flex w-full items-center gap-2 px-2 py-1 text-xs font-medium uppercase tracking-wider text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <Trash2 size={12} />
+            <span className="flex-1 text-left">Trash</span>
+            {archivedPages.length > 0 && (
+              <span className="rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] dark:bg-[#3a3a3a]">
+                {archivedPages.length}
+              </span>
+            )}
+            <ChevronDown
+              size={12}
+              className={cn("transition-transform", showTrash && "rotate-180")}
+            />
+          </button>
+          {showTrash && (
+            <div className="mt-1 space-y-0.5">
+              {archivedPages.length === 0 ? (
+                <p className="px-2 py-2 text-xs text-gray-400">
+                  No pages in trash
+                </p>
+              ) : (
+                archivedPages.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm text-gray-500"
+                  >
+                    <span className="truncate">
+                      {p.icon || "📄"} {p.title || "Untitled"}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => restorePage(p.id)}
+                        className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-green-600 dark:hover:bg-[#3a3a3a]"
+                        title="Restore"
+                      >
+                        <RotateCcw size={12} />
+                      </button>
+                      <button
+                        onClick={() => deletePage(p.id)}
+                        className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-red-500 dark:hover:bg-[#3a3a3a]"
+                        title="Delete permanently"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* New page button */}
+      <div className="px-3 pb-1">
+        <button
+          onClick={handleNewPage}
+          className="flex w-full items-center gap-2 rounded-lg bg-[#0F7DFF] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0b6ad4] active:scale-[0.98]"
+        >
+          <Plus size={16} />
+          New page
+        </button>
       </div>
 
       {/* Footer */}
@@ -176,12 +287,14 @@ export default function Sidebar() {
             <button
               onClick={toggleDarkMode}
               className="rounded p-1.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-[#3a3a3a] dark:hover:text-gray-300"
+              title={darkMode ? "Light mode" : "Dark mode"}
             >
               {darkMode ? <Sun size={14} /> : <Moon size={14} />}
             </button>
             <button
               onClick={logout}
               className="rounded p-1.5 text-gray-400 hover:bg-gray-200 hover:text-red-500 dark:hover:bg-[#3a3a3a]"
+              title="Sign out"
             >
               <LogOut size={14} />
             </button>
@@ -215,11 +328,11 @@ export default function Sidebar() {
               className="fixed inset-0 z-40 bg-black/40 md:hidden"
             />
             <motion.aside
-              initial={{ x: -300 }}
+              initial={{ x: -320 }}
               animate={{ x: 0 }}
-              exit={{ x: -300 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-y-0 left-0 z-50 flex h-screen w-[280px] flex-col bg-[#F7F7F5] shadow-xl dark:bg-[#252525] md:hidden safe-area-top"
+              exit={{ x: -320 }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+              className="fixed inset-y-0 left-0 z-50 flex h-screen w-[300px] flex-col bg-[#F7F7F5] dark:bg-[#252525] md:hidden safe-area-top elevation-3"
             >
               {sidebarContent}
             </motion.aside>
