@@ -22,25 +22,41 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), "DM Sans", system-ui, sans-serif;
   line-height: 1.7;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Desktop scrollbar */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: #404040;
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* Mobile: hide scrollbars for app-like feel */
+@media (max-width: 767px) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
 
-::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #404040;
+  * {
+    scrollbar-width: none;
+  }
 }
 
 /* Selection */
@@ -67,4 +83,37 @@ body {
 .dark .skeleton {
   background: linear-gradient(90deg, #2a2a2a 25%, #333 50%, #2a2a2a 75%);
   background-size: 200% 100%;
+}
+
+/* Safe area insets for PWA */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Textarea auto-resize helper */
+textarea {
+  overflow: hidden;
+}
+
+/* Mobile touch feedback */
+@media (max-width: 767px) {
+  button:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* Standalone PWA mode */
+@media all and (display-mode: standalone) {
+  body {
+    user-select: none;
+  }
+
+  input, textarea {
+    user-select: text;
+  }
 }
