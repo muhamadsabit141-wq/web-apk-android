@@ -57,6 +57,24 @@ body {
   * {
     scrollbar-width: none;
   }
+
+  /* Android-like system font rendering */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Prevent text selection on interactive elements */
+  button, a, nav, [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Smooth momentum scrolling on mobile */
+  .overflow-y-auto, .overflow-y-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Selection */
@@ -99,21 +117,53 @@ textarea {
   overflow: hidden;
 }
 
-/* Mobile touch feedback */
+/* Mobile touch feedback — Android ripple-like */
 @media (max-width: 767px) {
-  button:active {
-    transform: scale(0.98);
+  button:active, [role="button"]:active {
+    transform: scale(0.97);
     transition: transform 0.1s ease;
+  }
+
+  /* Larger touch targets on mobile */
+  .touch-target {
+    min-height: 48px;
+    min-width: 48px;
   }
 }
 
-/* Standalone PWA mode */
+/* Standalone PWA mode — full native feel */
 @media all and (display-mode: standalone) {
   body {
     user-select: none;
   }
 
-  input, textarea {
+  input, textarea, [contenteditable] {
     user-select: text;
   }
+
+  /* Status bar area for Android */
+  .pwa-top-safe {
+    padding-top: env(safe-area-inset-top, 24px);
+  }
+}
+
+/* Material-style elevation shadows */
+.elevation-1 {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06);
+}
+.elevation-2 {
+  box-shadow: 0 3px 6px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08);
+}
+.elevation-3 {
+  box-shadow: 0 10px 20px rgba(0,0,0,0.12), 0 3px 6px rgba(0,0,0,0.08);
+}
+
+.dark .elevation-1 {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+}
+.dark .elevation-2 {
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3);
+}
+.dark .elevation-3 {
+  box-shadow: 0 10px 20px rgba(0,0,0,0.4), 0 3px 6px rgba(0,0,0,0.3);
 }

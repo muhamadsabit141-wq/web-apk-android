@@ -69,7 +69,7 @@ export default function Sidebar() {
   }, [sidebarOpen]);
 
   const sidebarContent = (
-    <div className="flex h-full w-[280px] md:w-[260px] flex-col">
+    <div className="flex h-full w-[300px] md:w-[260px] flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2">
@@ -328,11 +328,11 @@ export default function Sidebar() {
               className="fixed inset-0 z-40 bg-black/40 md:hidden"
             />
             <motion.aside
-              initial={{ x: -300 }}
+              initial={{ x: -320 }}
               animate={{ x: 0 }}
-              exit={{ x: -300 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-y-0 left-0 z-50 flex h-screen w-[280px] flex-col bg-[#F7F7F5] shadow-xl dark:bg-[#252525] md:hidden safe-area-top"
+              exit={{ x: -320 }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+              className="fixed inset-y-0 left-0 z-50 flex h-screen w-[300px] flex-col bg-[#F7F7F5] dark:bg-[#252525] md:hidden safe-area-top elevation-3"
             >
               {sidebarContent}
             </motion.aside>
