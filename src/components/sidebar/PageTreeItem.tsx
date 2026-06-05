@@ -16,9 +16,10 @@ import { cn } from "@/lib/utils";
 interface PageTreeItemProps {
   pageId: string;
   depth?: number;
+  onNavigate?: () => void;
 }
 
-export default function PageTreeItem({ pageId, depth = 0 }: PageTreeItemProps) {
+export default function PageTreeItem({ pageId, depth = 0, onNavigate }: PageTreeItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
 
@@ -38,13 +39,16 @@ export default function PageTreeItem({ pageId, depth = 0 }: PageTreeItemProps) {
     <div>
       <div
         className={cn(
-          "group flex items-center gap-1 rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors",
+          "group flex items-center gap-1 rounded-lg px-2 py-2 md:py-1 text-sm cursor-pointer transition-colors",
           isActive
             ? "bg-gray-200/80 text-gray-900 dark:bg-[#363636] dark:text-gray-100"
             : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-[#2f2f2f]"
         )}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
-        onClick={() => setCurrentPage(pageId)}
+        onClick={() => {
+          setCurrentPage(pageId);
+          onNavigate?.();
+        }}
       >
         <button
           onClick={(e) => {
@@ -89,6 +93,7 @@ export default function PageTreeItem({ pageId, depth = 0 }: PageTreeItemProps) {
               const id = addPage("", pageId);
               setCurrentPage(id);
               setExpanded(true);
+              onNavigate?.();
             }}
             className="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-[#3a3a3a]"
           >
@@ -136,6 +141,7 @@ export default function PageTreeItem({ pageId, depth = 0 }: PageTreeItemProps) {
                 key={childId}
                 pageId={childId}
                 depth={depth + 1}
+                onNavigate={onNavigate}
               />
             ))}
           </motion.div>

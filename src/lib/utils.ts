@@ -1,17 +1,35 @@
 import { v4 as uuidv4 } from "uuid";
-import type { Page, Habit } from "./types";
+import type { Page, Habit, Block, BlockType } from "./types";
 
 export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(" ");
 }
 
-export function createPage(title: string, parentId: string | null = null): Page {
+export function createBlock(
+  type: BlockType = "text",
+  content: string = ""
+): Block {
+  return {
+    id: uuidv4(),
+    type,
+    content,
+    checked: type === "todo" ? false : undefined,
+    collapsed: type === "toggle" ? false : undefined,
+    children: type === "toggle" ? [] : undefined,
+  };
+}
+
+export function createPage(
+  title: string,
+  parentId: string | null = null
+): Page {
   return {
     id: uuidv4(),
     title,
     parentId,
     children: [],
     content: "",
+    blocks: [createBlock("text", "")],
     isFavorite: false,
     createdAt: Date.now(),
     updatedAt: Date.now(),
