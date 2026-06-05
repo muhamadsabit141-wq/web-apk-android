@@ -2,17 +2,20 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Page, Habit, User } from "./types";
-import { createPage, createHabit } from "./utils";
+import type { Page, Habit, User, Block, Database, MobileTab } from "./types";
+import { createPage, createHabit, createBlock } from "./utils";
 
 interface AppState {
   user: User | null;
   pages: Record<string, Page>;
   pageOrder: string[];
   habits: Habit[];
+  databases: Record<string, Database>;
   sidebarOpen: boolean;
   darkMode: boolean;
   currentPageId: string | null;
+  mobileTab: MobileTab;
+  searchQuery: string;
 
   setUser: (user: User | null) => void;
   login: (email: string, name: string) => void;
@@ -24,12 +27,19 @@ interface AppState {
   toggleFavorite: (id: string) => void;
   setCurrentPage: (id: string | null) => void;
 
+  addBlock: (pageId: string, afterBlockId: string | null, type?: Block["type"]) => string;
+  updateBlock: (pageId: string, blockId: string, updates: Partial<Block>) => void;
+  deleteBlock: (pageId: string, blockId: string) => void;
+  moveBlock: (pageId: string, blockId: string, direction: "up" | "down") => void;
+
   addHabit: (name: string, color: string) => void;
   removeHabit: (id: string) => void;
   toggleHabitDate: (habitId: string, date: string) => void;
 
   toggleSidebar: () => void;
   toggleDarkMode: () => void;
+  setMobileTab: (tab: MobileTab) => void;
+  setSearchQuery: (query: string) => void;
 }
 
 const defaultPages = (): { pages: Record<string, Page>; pageOrder: string[] } => {
@@ -53,9 +63,12 @@ export const useStore = create<AppState>()(
         pages: defaultP,
         pageOrder: defaultO,
         habits: [],
+        databases: {},
         sidebarOpen: true,
         darkMode: false,
         currentPageId: null,
+        mobileTab: "home",
+        searchQuery: "",
 
         setUser: (user) => set({ user }),
         login: (email, name) =>
@@ -131,12 +144,86 @@ export const useStore = create<AppState>()(
           set({
             pages: {
               ...state.pages,
-              [id]: { ...state.pages[id], isFavorite: !state.pages[id].isFavorite },
+              [id]: {
+                ...state.pages[id],
+                isFavorite: !state.pages[id].isFavorite,
+              },
             },
           });
         },
 
         setCurrentPage: (id) => set({ currentPageId: id }),
+
+        addBlock: (pageId, afterBlockId, type = "text") => {
+          const state = get();
+          const page = state.pages[pageId];
+          if (!page) return "";
+          const block = createBlock(type);
+          const blocks = [...(page.blocks || [])];
+          if (afterBlockId) {
+            const idx = blocks.findIndex((b) => b.id === afterBlockId);
+            blocks.splice(idx + 1, 0, block);
+          } else {
+            blocks.push(block);
+          }
+          set({
+            pages: {
+              ...state.pages,
+              [pageId]: { ...page, blocks, updatedAt: Date.now() },
+            },
+          });
+          return block.id;
+        },
+
+        updateBlock: (pageId, blockId, updates) => {
+          const state = get();
+          const page = state.pages[pageId];
+          if (!page) return;
+          set({
+            pages: {
+              ...state.pages,
+              [pageId]: {
+                ...page,
+                blocks: (page.blocks || []).map((b) =>
+                  b.id === blockId ? { ...b, ...updates } : b
+                ),
+                updatedAt: Date.now(),
+              },
+            },
+          });
+        },
+
+        deleteBlock: (pageId, blockId) => {
+          const state = get();
+          const page = state.pages[pageId];
+          if (!page) return;
+          const blocks = (page.blocks || []).filter((b) => b.id !== blockId);
+          if (blocks.length === 0) blocks.push(createBlock("text"));
+          set({
+            pages: {
+              ...state.pages,
+              [pageId]: { ...page, blocks, updatedAt: Date.now() },
+            },
+          });
+        },
+
+        moveBlock: (pageId, blockId, direction) => {
+          const state = get();
+          const page = state.pages[pageId];
+          if (!page) return;
+          const blocks = [...(page.blocks || [])];
+          const idx = blocks.findIndex((b) => b.id === blockId);
+          if (idx === -1) return;
+          const newIdx = direction === "up" ? idx - 1 : idx + 1;
+          if (newIdx < 0 || newIdx >= blocks.length) return;
+          [blocks[idx], blocks[newIdx]] = [blocks[newIdx], blocks[idx]];
+          set({
+            pages: {
+              ...state.pages,
+              [pageId]: { ...page, blocks, updatedAt: Date.now() },
+            },
+          });
+        },
 
         addHabit: (name, color) => {
           set({ habits: [...get().habits, createHabit(name, color)] });
@@ -163,6 +250,8 @@ export const useStore = create<AppState>()(
 
         toggleSidebar: () => set({ sidebarOpen: !get().sidebarOpen }),
         toggleDarkMode: () => set({ darkMode: !get().darkMode }),
+        setMobileTab: (tab) => set({ mobileTab: tab }),
+        setSearchQuery: (query) => set({ searchQuery: query }),
       };
     },
     { name: "habitsxd-store" }
