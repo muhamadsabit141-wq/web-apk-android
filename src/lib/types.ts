@@ -11,7 +11,8 @@ export type BlockType =
   | "quote"
   | "callout"
   | "toggle"
-  | "image";
+  | "image"
+  | "table";
 
 export interface Block {
   id: string;
@@ -28,11 +29,13 @@ export interface Page {
   id: string;
   title: string;
   icon?: string;
+  coverUrl?: string;
   parentId: string | null;
   children: string[];
   content: string;
   blocks: Block[];
   isFavorite: boolean;
+  isArchived?: boolean;
   createdAt: number;
   updatedAt: number;
 }
